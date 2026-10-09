@@ -20,6 +20,54 @@ char* itemNames[10] = {
 };
 int inventory[10] = { 0, 2, 8, 5, 1, 8, 3, 5, 4, 2 };
 
+//проверрка ввода пользователя
+int readInt()
+{
+	int value;
+	while (scanf_s("%d", &value) != 1)
+	{
+		while (getchar() != '\n');
+		printf("Неверный ввод, попробуйте снова: ");
+	}
+	while (getchar() != '\n');
+	return value;
+}
+//считаем время работы
+void timeToWork()
+{
+	int workTime = 0;
+	printf("Сколько часов выхотите поработать: \n");
+	workTime = readInt();
+
+	if (workTime < 0)
+	{
+		printf("Нельзя работать отрицательное количество часов.\n");
+		return;
+	}
+	current_hour += workTime;
+	//проверка и добавление часов/дней
+	if (current_hour >= 24)
+	{
+		current_day += current_hour / 24;
+		current_hour = current_hour % 24;
+	}
+	printf("Текущее время: день %d, время %d:00\n", current_day, current_hour);
+
+}
+
+void checkInventory()
+{
+	//перебираем инвентарь и выводим
+	for (int i = 0; i < 10; i++)
+	{
+		if (inventory[i] == 0)
+			printf("Слот %d: пусто\n", i);
+		else
+			printf("Слот %d: [%d] (%s)\n", i, inventory[i], itemNames[inventory[i]]);
+
+	}
+
+}
 
 int main()
 {
@@ -27,8 +75,7 @@ int main()
 	while (1)
 	{
 		printf("Меню \n [0] Выход \n [1] Посмотреть на часы \n [2] Промотать время (Поработать) \n [3] Посмотреть инвентарь \n [4] Положить предмет в слот \n [5] Выбросить предмет \n [6] Выполнить задание по варианту \n");
-		int choice;
-		scanf_s("%d", &choice);
+		int choice = readInt();
 		//меню с выбором действий
 		switch (choice)
 		{
@@ -45,12 +92,12 @@ int main()
 
 		case(2):
 		{
-			printf("Выбор1\n");
+			timeToWork();
 			break;
 		}
 		case(3):
 		{
-			printf("Выбор2\n");
+			checkInventory();
 
 			break;
 		}

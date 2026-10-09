@@ -32,6 +32,13 @@ int readInt()
 	while (getchar() != '\n');
 	return value;
 }
+
+//красота (чисто для красивого выделения времени)
+void setColor(int color)
+{
+	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), color);
+}
+
 //считаем время работы
 void timeToWork()
 {
@@ -51,7 +58,9 @@ void timeToWork()
 		current_day += current_hour / 24;
 		current_hour = current_hour % 24;
 	}
+	setColor(10);
 	printf("Текущее время: день %d, время %d:00\n", current_day, current_hour);
+	setColor(7);
 
 }
 
@@ -132,7 +141,7 @@ int main()
 	SetConsoleOutputCP(65001);
 	while (1)
 	{
-		printf("Меню \n [0] Выход \n [1] Посмотреть на часы \n [2] Промотать время (Поработать) \n [3] Посмотреть инвентарь \n [4] Положить предмет в слот \n [5] Выбросить предмет \n [6] Выполнить задание по варианту \n");
+		printf("Меню \n [0] Выход \n [1] Посмотреть на часы \n [2] Промотать время (Поработать) \n [3] Посмотреть инвентарь \n [4] Положить предмет в слот \n [5] Выбросить предмет \n [6] Инверсия карманов \n");
 		int choice = readInt();
 		//меню с выбором действий
 		switch (choice)
@@ -144,29 +153,36 @@ int main()
 
 		case(1):
 		{
+			system("cls");
+			setColor(10);
 			printf("Текущее время: день %d, время %d:00\n", current_day, current_hour);
+			setColor(7);
 			break;
 		}
 
 		case(2):
 		{
+			system("cls");
 			timeToWork();
 			break;
 		}
 		case(3):
 		{
+			system("cls");
 			checkInventory();
 			break;
 		}
 
 		case(4):
 		{
+			system("cls");
 			svapItem();
 			break;
 		}
 
 		case(5):
 		{
+			system("cls");
 			dropItem();
 
 			break;
@@ -174,6 +190,7 @@ int main()
 
 		case(6):
 		{
+			system("cls");
 			reverseInventory();
 			break;
 		}

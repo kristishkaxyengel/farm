@@ -110,6 +110,23 @@ void dropItem()
 	printf("Слот %d очищен.\n", slot);
 }
 
+void reverseInventory()
+{
+	printf("Инвентарь до:\n");
+	checkInventory();
+
+	// меняем первый и последний слот типо по умному
+	for (int i = 0; i < 10 / 2; i++)
+	{
+		int temp = inventory[i];
+		inventory[i] = inventory[9 - i];
+		inventory[9 - i] = temp;
+	}
+
+	printf("\nИнвентарь после:\n");
+	checkInventory();
+}
+
 int main()
 {
 	SetConsoleOutputCP(65001);
@@ -157,8 +174,7 @@ int main()
 
 		case(6):
 		{
-			printf("Выбор5\n");
-
+			reverseInventory();
 			break;
 		}
 

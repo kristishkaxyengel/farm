@@ -69,6 +69,47 @@ void checkInventory()
 
 }
 
+//замена предметов
+void svapItem()
+{
+
+	int slot, id;
+	checkInventory();
+	printf("Введите номер слота который хотите заменить (0-9): ");
+	slot = readInt();
+	if (slot < 0 || slot > 9) { printf("Неверный номер слота!\n"); return; }
+	//добавляем вывод предметов для удобства
+	for (int i = 0; i < 10; i++)
+	{
+		if (itemNames[i] == 0)
+			printf("Слот %d: пусто\n", i);
+		else
+			printf("Предмет %d: (%s)\n", i, itemNames[i]);
+
+	}
+
+	printf("Введите ID предмета (0-9): ");
+	id = readInt();
+	if (id < 0 || id > 9) { printf("Неверный ID предмета!\n"); return; }
+
+	inventory[slot] = id;
+	printf("В слот %d положен предмет [%d] (%s)\n", slot, id, itemNames[id]);
+}
+
+//удаление предмета
+void dropItem()
+{
+	//выводим весь список для удобства выбора
+	checkInventory();
+	int slot;
+	printf("Введите номер слота который хотите выбросить  (0-9): ");
+	slot = readInt();
+	if (slot < 0 || slot > 9) { printf("Неверный номер слота!\n"); return; }
+
+	inventory[slot] = 0;
+	printf("Слот %d очищен.\n", slot);
+}
+
 int main()
 {
 	SetConsoleOutputCP(65001);
@@ -98,20 +139,18 @@ int main()
 		case(3):
 		{
 			checkInventory();
-
 			break;
 		}
 
 		case(4):
 		{
-			printf("Выбор3\n");
-
+			svapItem();
 			break;
 		}
 
 		case(5):
 		{
-			printf("Выбор4\n");
+			dropItem();
 
 			break;
 		}

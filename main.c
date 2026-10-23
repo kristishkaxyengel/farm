@@ -178,6 +178,89 @@ void reverseInventory()
 	checkInventory();
 }
 
+
+// Поиск предмета в рюкзаке по названию
+void searchItemByName()
+{
+	char query[MAX_NAME_LEN];
+
+	printf("Введите название предмета для поиска: ");
+	fgets(query, sizeof(query), stdin);
+	query[strcspn(query, "\r\n")] = '\0';
+
+	for (int i = 1; i < MAX_ITEMS; i++)
+	{
+		if (strcmp(item_names[i], query) == 0)
+		{
+			int count = 0;
+
+			printf("Предмет [%d] (%s) найден в слотах: ", i, item_names[i]);
+
+			for (int j = 0; j < MAX_ITEMS; j++)
+			{
+				if (inventory[j] == i)
+				{
+					printf("%d ", j);
+					count++;
+				}
+			}
+
+			if (count == 0)
+				printf("\nВ рюкзаке этого предмета нет.\n");
+			else
+				printf("\nВсего штук: %d\n", count);
+
+			return;
+		}
+	}
+
+	printf("Предмет \"%s\" не найден в каталоге.\n", query);
+}
+
+// Запись состояния фермы в дневник
+void saveDiary()
+{
+	FILE* file = NULL;
+
+	// Открываем файл для перезаписи
+	if (fopen_s(&file, "diary.txt", "w") != 0 || file == NULL)
+	{
+		printf("[!] Не удалось открыть diary.txt\n");
+		return;
+	}
+
+	printf("\n========== ДНЕВНИК ФЕРМЕРА ==========\n");
+	fprintf(file, "========== ДНЕВНИК ФЕРМЕРА ==========\n");
+
+	printf("Фермер: %s\n", username);
+	fprintf(file, "Фермер: %s\n", username);
+
+	printf("День: %d\n", current_day);
+	fprintf(file, "День: %d\n", current_day);
+
+	printf("Время: %02d:00\n", current_hour);
+	fprintf(file, "Время: %02d:00\n", current_hour);
+
+	printf("\nИнвентарь:\n");
+	fprintf(file, "\nИнвентарь:\n");
+
+	for (int i = 0; i < MAX_ITEMS; i++)
+	{
+		char* itemName = item_names[inventory[i]];
+
+		printf("Слот %d: %s\n", i, itemName);
+		fprintf(file, "Слот %d: %s\n", i, itemName);
+	}
+
+	printf("=====================================\n");
+	fprintf(file, "=====================================\n");
+
+	fclose(file);
+
+	printf("\n[+] Состояние фермы сохранено в diary.txt\n");
+}
+
+
 void boardOfQuests()
 {
 	FILE* fin = NULL, * fout = NULL;
@@ -254,7 +337,7 @@ int main()
 	while (1)
 	{
 		printf("=== Фермер: %s ===\n", username);   //  шапка с именем
-		printf("Меню \n [0] Выход \n [1] Посмотреть на часы \n [2] Промотать время (Поработать) \n [3] Посмотреть инвентарь \n [4] Положить предмет в слот \n [5] Выбросить предмет \n [6] Инверсия карманов \n [7] Доска объявлений \n");
+		printf("Меню \n [0] Выход \n [1] Посмотреть на часы \n [2] Промотать время (Поработать) \n [3] Посмотреть инвентарь \n [4] Положить предмет в слот \n [5] Выбросить предмет \n [6] Инверсия карманов \n [7] Поиск предмета в рюкзаке по названию \n [8] Поиск предмета в рюкзаке по названию \n [9] Доска объявлений \n");
 		int choice = readInt();
 		//меню с выбором действий
 		switch (choice)
@@ -307,6 +390,20 @@ int main()
 			break;
 		}
 		case(7):
+		{
+
+			system("cls");
+			checkInventory();
+			searchItemByName();
+			break;
+		}
+		case(8):
+		{
+			system("cls");
+			saveDiary();
+			break;
+		}
+		case(9):
 		{
 			system("cls");
 			boardOfQuests();

@@ -2,6 +2,7 @@
 #include <locale.h> 
 #include <windows.h>
 #include <string.h>
+#include <stdlib.h>
 
 //имя пользователя
 char username[32];
@@ -177,6 +178,73 @@ void reverseInventory()
 	checkInventory();
 }
 
+void boardOfQuests()
+{
+	FILE* fin = NULL, * fout = NULL;
+	if (fopen_s(&fin, "input.txt", "r") != 0 || !fin)
+	{
+		printf("[!] input.txt не найден\n");
+		return;
+	}
+	if (fopen_s(&fout, "output.txt", "w") != 0 || !fout)
+	{
+		printf("[!] output.txt не создать\n");
+		fclose(fin);
+		return;
+	}
+
+	// заголовок — и на экран, и в файл
+	printf("=== Доска объявлений (день %d) ===\n\n", current_day);
+	fprintf(fout, "=== Доска объявлений (день %d) ===\n\n", current_day);
+
+	char line[256];
+	int total = 0, ready_count = 0;
+
+	while (fgets(line, sizeof(line), fin))
+	{
+		int day, reward;
+		char customer[64], item[32];
+
+		if (sscanf_s(line, "%d|%63[^|]|%31[^|]|%d",
+			&day, customer, (unsigned)sizeof(customer),
+			item, (unsigned)sizeof(item), &reward) != 4)
+			continue;
+
+		if (day > current_day) continue;   // квест ещё не доступен
+		total++;
+
+		// ищем предмет в рюкзаке
+		int ready = 0;
+		for (int i = 0; i < MAX_ITEMS; i++)
+		{
+			if (inventory[i] != 0 &&
+				strcmp(item_names[inventory[i]], item) == 0)
+			{
+				ready = 1;
+				break;
+			}
+		}
+		if (ready) ready_count++;
+
+		const char* status = ready ? "[ГОТОВО К СДАЧЕ]" : "[В ПРОЦЕССЕ]";
+
+		// одна и та же строка — на экран и в файл
+		printf("День %d | %s | %s | %d | %s\n",
+			day, customer, item, reward, status);
+		fprintf(fout, "День %d | %s | %s | %d | %s\n",
+			day, customer, item, reward, status);
+	}
+
+	fclose(fin);
+
+	// итог — тоже в оба места
+	printf("\nИтого: доступно %d, готово к сдаче %d\n", total, ready_count);
+	fprintf(fout, "\nИтого: доступно %d, готово к сдаче %d\n", total, ready_count);
+
+	fclose(fout);
+	printf("\n[+] Результат сохранён в output.txt\n");
+}
+
 int main()
 {
 	SetConsoleOutputCP(65001);
@@ -186,7 +254,7 @@ int main()
 	while (1)
 	{
 		printf("=== Фермер: %s ===\n", username);   //  шапка с именем
-		printf("Меню \n [0] Выход \n [1] Посмотреть на часы \n [2] Промотать время (Поработать) \n [3] Посмотреть инвентарь \n [4] Положить предмет в слот \n [5] Выбросить предмет \n [6] Инверсия карманов \n");
+		printf("Меню \n [0] Выход \n [1] Посмотреть на часы \n [2] Промотать время (Поработать) \n [3] Посмотреть инвентарь \n [4] Положить предмет в слот \n [5] Выбросить предмет \n [6] Инверсия карманов \n [7] Доска объявлений \n");
 		int choice = readInt();
 		//меню с выбором действий
 		switch (choice)
@@ -238,7 +306,12 @@ int main()
 			reverseInventory();
 			break;
 		}
-
+		case(7):
+		{
+			system("cls");
+			boardOfQuests();
+			break;
+		}
 		default: printf("Неверный пункт меню\n"); break;
 		}
 	}

@@ -134,6 +134,7 @@ void svapItem()
 	printf("Введите номер слота который хотите заменить (0-9): ");
 	slot = readInt();
 	if (slot < 0 || slot > 9) { printf("Неверный номер слота!\n"); return; }
+
 	//добавляем вывод предметов для удобства
 	for (int i = 0; i < MAX_ITEMS; i++)
 	{
@@ -261,11 +262,12 @@ void saveDiary()
 	printf("\n[+] Состояние фермы сохранено в diary.txt\n");
 }
 
-
+//========================================================
+//доска объявлений
 void boardOfQuests()
 {
-	FILE* fin = NULL, * fout = NULL;
-	if (fopen_s(&fin, "input.txt", "r") != 0 || !fin)
+	FILE* fin = NULL, * fout = NULL; //file это для работы с файлами fin начальный файл 
+	if (fopen_s(&fin, "input.txt", "r") != 0 || !fin) // открывае файл через fopen_s и вводим 
 	{
 		printf("[!] input.txt не найден\n");
 		return;
@@ -274,14 +276,15 @@ void boardOfQuests()
 	{
 		printf("[!] output.txt не создать\n");
 		fclose(fin);
+
 		return;
 	}
 
 	// заголовок — и на экран, и в файл
-	printf("=== Доска объявлений (день %d) ===\n\n", current_day);
-	fprintf(fout, "=== Доска объявлений (день %d) ===\n\n", current_day);
+	printf("=== Доска объявлений (день %d) ===\n\n", current_day); //выводит в консоль
+	fprintf(fout, "=== Доска объявлений (день %d) ===\n\n", current_day); // записывает в сам в файл
 
-	char line[256];
+	char line[256]; // символы для записи из input в код
 	int total = 0, ready_count = 0;
 
 	while (fgets(line, sizeof(line), fin))
@@ -289,12 +292,12 @@ void boardOfQuests()
 		int day, reward;
 		char customer[64], item[32];
 
-		if (sscanf_s(line, "%d|%63[^|]|%31[^|]|%d",
+		if (sscanf_s(line, "%d|%63[^|]|%31[^|]|%d", //читаем и записываем информацию условно число/первый масив с заказчикм/второй масив с предметом/награда
 			&day, customer, (unsigned)sizeof(customer),
 			item, (unsigned)sizeof(item), &reward) != 4)
 			continue;
 
-		if (day > current_day) continue;   // квест ещё не доступен
+		if (day > current_day) continue;   // квест ещё не доступен типо проверка на день
 		total++;
 
 		// ищем предмет в рюкзаке
@@ -302,7 +305,7 @@ void boardOfQuests()
 		for (int i = 0; i < MAX_ITEMS; i++)
 		{
 			if (inventory[i] != 0 &&
-				strcmp(item_names[inventory[i]], item) == 0)
+				strcmp(item_names[inventory[i]], item) == 0) // сравниваем предмет в задании с предметами в инвентаре
 			{
 				ready = 1;
 				break;
@@ -310,7 +313,7 @@ void boardOfQuests()
 		}
 		if (ready) ready_count++;
 
-		const char* status = ready ? "[ГОТОВО К СДАЧЕ]" : "[В ПРОЦЕССЕ]";
+		const char* status = ready ? "[ГОТОВО К СДАЧЕ]" : "[В ПРОЦЕССЕ]"; // если статус готов рейди то к сдаче иначк в процесс
 
 		// одна и та же строка — на экран и в файл
 		printf("День %d | %s | %s | %d | %s\n",
@@ -328,6 +331,8 @@ void boardOfQuests()
 	fclose(fout);
 	printf("\n[+] Результат сохранён в output.txt\n");
 }
+
+///////////////////////////////////////////////
 
 #define USERNAME_LEN 32
 /////размер карты выберет от 5 до 30
@@ -350,7 +355,7 @@ void clearScreen(void)
 	system("cls");
 }
 
-////////защита от дурака. читает одну команду движения: W, A,S,D или Q все остальное не принимает и переспрашивает 
+//////////защита от дурака. читает одну команду движения: W, A,S,D или Q все остальное не принимает и переспрашивает 
 
 char readDirection(void)
 {
@@ -376,7 +381,6 @@ char readDirection(void)
 		printf("Неверная команда. Введите W/A/S/D, Q или E: ");
 	}
 }
-
 
 /////выделение памяти под карту
 ////map[0] - указатель на первую строку
@@ -674,8 +678,173 @@ void mapPlacePortal(char** map, int height, int width)
 		map[py][px] = MAP_PORTAL; ///поставили портал
 }
 
+//////само приключение логика простая карта лес, герой ходит с помощью
+//заданных клавиш, уходит за край-перемещается на другой край
+//наступил на портал появляется новый лес
+//Q домой только с портала
+void adventureRun5(void)
+
+{
+	///случайный размер
+	int height = MAP_MIN_SIZE + rand() % (MAP_MAX_SIZE - MAP_MIN_SIZE + 1);
+	int width = MAP_MIN_SIZE + rand() % (MAP_MAX_SIZE - MAP_MIN_SIZE + 1);
+
+	char** map = mapCreate(height, width);
+	if (!map)
+	{
+		printf("[!] Не удалось выделить память под карту.\n");
+		return;
+	}
+
+	int heroX = 0, heroY = 0;
+	mapGenerate5(map, height, width, &heroX, &heroY);
+
+	int wanderCount = 0; //сколько раз ушел за край на этой карте
+	int distanceFromHome = 0;//сколько карт пройдено(дальность от дома)
+	int onPortal = 0;//стоим на портале для Q
+
+	printf("\n=== ПРИКЛЮЧЕНИЕ: ЛЕС-КОЛЬЦО (вариант 5) ===\n");
+	printf("Размер карты: %d x %d\n", height, width);
+	printf("Управление: W-вверх A-влево S-вниз D-вправо Q-домой\n");
+	printf("Q - домой, но только с портала");
+	printf("E - уйти в новый лес, но только с потрала");
+	printf("Правила:\n");
+	printf("Шаг за край -> телепорт на другой край этой же карты.\n");
+	printf("После %d телепортов появится портал 'P'.\n", WANDER_TO_PORTAL);
+	printf("Домой 'Q' можно только с портала 'P', E - дальше.\n\n");
+
+	//////пауза чтобы успеть прочитать правила
+	printf("Нажмите Enter,  чтобы начать");
+	while (getchar() != '\n');
+
+	int running = 1;
+	while (running)
+	{
+		//отрисовка кадра
+		clearScreen();
+		printf("Дальность от дома: %d   Блужданий: %d/%d\n\n",
+			distanceFromHome, wanderCount, WANDER_TO_PORTAL);
+		mapPrint5(map, height, width);
+		printf("\nГерой в (%d, %d)\n", heroX, heroY);
+
+		if (onPortal)
+			printf("Вы на портале! Q — отправиться домой, E - в новый лес, шаг - сойти.\n");
+
+		printf("Куда идём? > ");
+		char cmd = readDirection();
+
+		////Q домой только с портала
+		if (cmd == 'Q')
+		{
+			if (onPortal)
+			{
+				running = 0;
+				continue;
+			}
+			printf("[!] Домой можно только с портала 'P'.\n");
+			Sleep(SLEEP_BAD_MOVE);
+			continue;
+		}
+		if (cmd == 'E')
+		{
+			if (!onPortal)
+			{
+				printf("[!] В новый лес можно только с портала.\n");
+				Sleep(SLEEP_BAD_MOVE);
+				continue;
+			}
+			printf("\n[*] Вы вошли в портал и ушли в новый лес...\n");
+			Sleep(SLEEP_BAD_MOVE);
+			///////ОБЯЗАТЕЛЬНО освободить старую карту
+			mapFree(map, height);
+
+			/////новый случайный размер
+			height = MAP_MIN_SIZE + rand() % (MAP_MAX_SIZE - MAP_MIN_SIZE + 1);
+			width = MAP_MIN_SIZE + rand() % (MAP_MAX_SIZE - MAP_MIN_SIZE + 1);
+
+			//////новая карта
+			map = mapCreate(height, width);
+			if (!map)
+			{
+				printf("[!] Не удалось выделить память под новую карту.\n");
+				return;
+			}
+			mapGenerate5(map, height, width, &heroX, &heroY);
+
+			//////обновляем счётчики
+			distanceFromHome++;
+			wanderCount = 0;
+			onPortal = 0;
+
+			printf("[+] Новая карта: %d x %d. Дальность от дома: %d\n",
+				height, width, distanceFromHome);
+			Sleep(SLEEP_BAD_MOVE);
+			continue;
+		}
+
+		//////снчала сходим с портала потом шагаем
+		if (onPortal)
+			onPortal = 0; ////сошли с портала
 
 
+		//пробуем шагнуть
+		int result = heroTryMove5(map, height, width, &heroX, &heroY, cmd);
+
+		if (result == 0)//туда нельзя
+		{
+			printf("[!] Туда нельзя.\n");
+			Sleep(SLEEP_BAD_MOVE);
+			continue;
+		}
+
+		if (result == -1)//вышли за край-телепорт
+		{
+			map[heroY][heroX] = MAP_FLOOR;//без этой строки на карте будет две @
+
+			///телепорт по модулю
+			switch (cmd)
+			{
+			case 'W': heroY = height - 1; break;//верх-низ
+			case 'S': heroY = 0;          break;//низ-верх
+			case 'A': heroX = width - 1;  break;//лево-право
+			case 'D': heroX = 0;          break;//право-лево
+			}
+			map[heroY][heroX] = MAP_HERO;
+
+			wanderCount++;
+			onPortal = 0;//сошли с портала если были на нем
+
+			printf("[~] Вас занесло на другой край! Блужданий: %d\n", wanderCount);
+
+			//////после 3 блужданий появляется портал
+			if (wanderCount >= WANDER_TO_PORTAL)
+				mapPlacePortal(map, height, width);
+
+			Sleep(SLEEP_BAD_MOVE);
+			continue;
+		}
+
+		if (result == 2)//наступили на портал - перешли на новую карту
+		{
+			onPortal = 1;
+			printf("\n[*] Вы встали на портал \n");
+			printf("    Q — домой, E — в новый лес, шаг — сойти с портала.\n");
+			Sleep(SLEEP_BAD_MOVE);
+			continue;
+		}
+		if (result == 1)
+			onPortal = 0;
+	}
+
+	//обязательно освободили прошлую карту
+	mapFree(map, height);
+	printf("Возврат в ферму. Дальность от дома: %d\n", distanceFromHome);
+	Sleep(SLEEP_RETURN);
+}
+
+
+
+//========================================================
 int main()
 {
 	SetConsoleOutputCP(65001);
@@ -685,7 +854,7 @@ int main()
 	while (1)
 	{
 		printf("=== Фермер: %s ===\n", username);   //  шапка с именем
-		printf("Меню \n [0] Выход \n [1] Посмотреть на часы \n [2] Промотать время (Поработать) \n [3] Посмотреть инвентарь \n [4] Положить предмет в слот \n [5] Выбросить предмет \n [6] Инверсия карманов \n [7] Поиск предмета в рюкзаке по названию \n [8] Поиск предмета в рюкзаке по названию \n [9] Доска объявлений \n");
+		printf("Меню \n [0] Выход \n [1] Посмотреть на часы \n [2] Промотать время (Поработать) \n [3] Посмотреть инвентарь \n [4] Положить предмет в слот \n [5] Выбросить предмет \n [6] Инверсия карманов \n [7] Поиск предмета в рюкзаке по названию \n [8] Записать состояние в дневник \n [9] Доска объявлений \n [10] Отправиться в приключение (лес-кольцо) \n");
 		int choice = readInt();
 		//меню с выбором действий
 		switch (choice)
@@ -757,10 +926,16 @@ int main()
 			boardOfQuests();
 			break;
 		}
-		default: printf("Неверный пункт меню\n"); break;
+		case(10):
+		{
+			system("cls");
+			adventureRun5();    // ВАРИАНТ 5
+			break;
+		}
+		default:
+			printf("Неверный пункт меню\n");
+			break;
 		}
 	}
 	return 0;
 }
-//пришлось блин менять все чтобы из файла читалось мне не нрав это (дизлайк)
-// а еще коментов так много потому что я не хочу забыть что и как работает, а то потом буду ломать голову

@@ -378,6 +378,177 @@ char readDirection(void)
 }
 
 
+/////выделение памяти под карту
+////map[0] - указатель на первую строку
+//////map[1] - указатель на вторую строку
+/////ксли на каком то шаге память кончилась обязательно нужно освободить
+
+char** mapCreate(int height, int width)
+{
+	char** map = (char**)malloc(height * sizeof(char*));
+	if (!map) return NULL; ///память кончилась вернем NULL
+
+	for (int i = 0; i < height; i++)
+	{
+		map[i] = (char*)malloc(width * sizeof(char));
+		if (!map[i]) ////не выделилось открываем все что успели
+		{
+			for (int j = 0; j < i; j++) free(map[j]);///освободить строки 0...i-1
+			free(map);////освободить массив указателей
+			return NULL;
+		}
+	}
+	return map;
+}
+
+
+/////освобождение памяти сначала строки потом массив, если наоборот то потреяем указатели на строки и получимутечку
+
+void mapFree(char** map, int height)
+{
+	if (!map) return; ///NULL освобождать не надо
+	for (int i = 0; i < height; i++) free(map[i]);
+	free(map);
+}
+
+////генерируем карту и ставим героя на случайную клетку
+void mapGenerate(char** map, int height, int width, int* heroX, int* heroY)
+{
+	///////случайный процент генерации от 15 до 30
+	int obstaclePercent = OBSTACLE_PERCENT_MIN +
+		rand() % (OBSTACLE_PERCENT_MAX - OBSTACLE_PERCENT_MIN + 1);
+
+	for (int y = 0; y < height; y++)
+	{
+		for (int x = 0; x < width; x++)
+		{
+			//////края это стены внутри свободно
+			if (y == 0 || y == height - 1 || x == 0 || x == width - 1)
+			{
+				map[y][x] = MAP_WALL;
+				continue; //////к следующей клетке
+			}
+			///////rand() % 100 дает 0..99 если меньше процента то припятствие
+			int roll = rand() % 100;
+			if (roll < obstaclePercent)
+				map[y][x] = (rand() % 2 == 0) ? MAP_TREE : MAP_ROCK;
+			///////если rand четный то будет дерево если нечет то камень примерно 50/50
+			else
+				map[y][x] = MAP_FLOOR;
+		}
+	}
+	////////ищем свободную клетку для героя
+	int hx, hy;
+	do {
+		hx = 1 + rand() % (width - 2); ////от 1 до width-2 не настенку
+		hy = 1 + rand() % (height - 2);
+	} while (map[hy][hx] != MAP_FLOOR);
+
+	map[hy][hx] = MAP_HERO; ////поставили героя
+	*heroX = hx; ///отдали координаты наружу через указатели
+	*heroY = hy;
+}
+
+/////рисует карту каждому символу дается свой цвет
+void mapPrint(char** map, int height, int width)
+{
+	for (int y = 0; y < height; y++)
+	{
+		for (int x = 0; x < width; x++)
+		{
+			char c = map[y][x];
+			switch (c)
+			{
+			case MAP_HERO: setColor(14); break;///желтый егерой
+			case MAP_WALL: setColor(8);  break;///серые стены
+			case MAP_TREE: setColor(2);  break;///зеленые деревья
+			case MAP_ROCK: setColor(7);  break;///белые камни
+			default:       setColor(15); break;///все остальное белое
+			}
+			putchar(c); ///вывести один символ быстрее
+		}
+		putchar('\n');
+	}
+	setColor(7);
+}
+
+//////попытка шага 1-шаг сделан 0-нельзя препятствие -1-выход за край
+int heroTryMove(char** map, int height, int width,
+	int* heroX, int* heroY, char cmd)
+{
+	//////dx/dy смещение по осям
+	int dx = 0, dy = 0;
+	switch (cmd)
+	{
+	case 'W': dy = -1; break;
+	case 'S': dy = 1; break;
+	case 'A': dx = -1; break;
+	case 'D': dx = 1; break;
+	default:  return 0;////неизвестная команда значит ничего не происходит
+	}
+
+	int nx = *heroX + dx; ///новые кординаты
+	int ny = *heroY + dy;
+	//////проверяем обязательно границы
+	if (nx < 0 || nx >= width || ny < 0 || ny >= height) return 0;
+	/////проходимость только на пол
+	if (map[ny][nx] != MAP_FLOOR) return 0;
+	/////если все круто то перемещаем героя на новую клетку стирая с прошлой
+	map[*heroY][*heroX] = MAP_FLOOR;
+	*heroX = nx;
+	*heroY = ny;
+	map[*heroY][*heroX] = MAP_HERO;
+	return 1;
+}
+////базовое приключение оставляю если пригодится, а так не используется
+void adventureRun(void)
+{
+	int height = MAP_MIN_SIZE + rand() % (MAP_MAX_SIZE - MAP_MIN_SIZE + 1);
+	int width = MAP_MIN_SIZE + rand() % (MAP_MAX_SIZE - MAP_MIN_SIZE + 1);
+
+	char** map = mapCreate(height, width);
+	if (!map)
+	{
+		printf("[!] Не удалось выделить память под карту.\n");
+		return;
+	}
+
+	int heroX = 0, heroY = 0;
+	mapGenerate(map, height, width, &heroX, &heroY);
+
+	printf("\n=== ПРИКЛЮЧЕНИЕ ===\n");
+	printf("Размер карты: %d x %d\n", height, width);
+	printf("Управление: W-вверх A-влево S-вниз D-вправо Q-выйти\n\n");
+
+	int running = 1;
+	while (running)
+	{
+		clearScreen();
+		mapPrint(map, height, width);
+		printf("\nГерой в (%d, %d)\n", heroX, heroY);
+		printf("Куда идём? > ");
+
+		char cmd = readDirection();
+
+		if (cmd == 'Q')
+		{
+			running = 0;
+			continue;
+		}
+
+		if (!heroTryMove(map, height, width, &heroX, &heroY, cmd))
+		{
+			printf("[!] Туда нельзя.\n");
+			Sleep(400);
+		}
+	}
+
+	mapFree(map, height);
+	printf("Возврат в ферму.\n");
+}
+
+
+
 int main()
 {
 	SetConsoleOutputCP(65001);

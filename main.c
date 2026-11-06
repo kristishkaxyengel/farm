@@ -3,6 +3,7 @@
 #include <windows.h>
 #include <string.h>
 #include <stdlib.h>
+#include <time.h>
 
 //имя пользователя
 char username[32];
@@ -33,7 +34,7 @@ void fillDefaultItems()
 }
 
 // читаем названия предметов из файла (по строчке на ID)
-void loadItemsFromFile(const char* filename) 
+void loadItemsFromFile(const char* filename)
 {
 	fillDefaultItems();   // сначала заменяем массив дефолтными значениями на случай если в файле чего то будет не хватать
 
@@ -327,6 +328,55 @@ void boardOfQuests()
 	fclose(fout);
 	printf("\n[+] Результат сохранён в output.txt\n");
 }
+
+#define USERNAME_LEN 32
+/////размер карты выберет от 5 до 30
+#define MAP_MIN_SIZE 5
+#define MAP_MAX_SIZE 30
+//////////символы на карте
+#define MAP_WALL '#'
+#define MAP_FLOOR '.'
+#define MAP_TREE 'T'
+#define MAP_ROCK 'R'
+#define MAP_HERO '@'
+///////вероятность препяытствий на карте от 15 до 30%
+#define OBSTACLE_PERCENT_MIN 15
+#define OBSTACLE_PERCENT_MAX 30
+
+
+////////очистка экрана
+void clearScreen(void)
+{
+	system("cls");
+}
+
+////////защита от дурака. читает одну команду движения: W, A,S,D или Q все остальное не принимает и переспрашивает 
+
+char readDirection(void)
+{
+	char line[16]; ////маленький буфер
+	char cmd;
+
+	while (1)
+	{
+		if (fgets(line, sizeof(line), stdin) == NULL)
+			continue; ////не прочиталось, новая попытка
+
+		/////пропускаем пробелы и табы в начале строки
+		int i = 0;
+		while (line[i] == ' ' || line[i] == '\t') i++;
+
+		/////toupper переводит "w" в "W", защита от отрицательных значений
+		cmd = (char)toupper((unsigned char)line[i]);
+
+		/////проверяем что это одна из разрешенных команд
+		if (cmd == 'W' || cmd == 'A' || cmd == 'S' || cmd == 'D' || cmd == 'Q' || cmd == 'E')
+			return cmd;
+
+		printf("Неверная команда. Введите W/A/S/D, Q или E: ");
+	}
+}
+
 
 int main()
 {

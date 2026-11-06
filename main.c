@@ -548,6 +548,133 @@ void adventureRun(void)
 }
 
 
+////===================ВАРИАНТ 5 *ЛЕС КОЛЬЦО*============================
+#define MAP_PORTAL 'P' ///портал
+#define WANDER_TO_PORTAL 3 ///сколько блужданий до появления портала
+#define MAP_GEN_ATTEMPTS 1000 ///лимит попыток найти свободную клетку
+#define SLEEP_BAD_MOVE 400 ////пауза после "ттуда нельзя"
+#define SLEEP_RETURN 800 ///пауза перед возвратом в меню
+
+/////ищет случайную пустую клетку возращает 1 еесли нашел а 0 если не смог
+///лиммит попыток чтобы не зациклиться если карта забита
+int findFreeCell5(char** map, int height, int width, int* outX, int* outY)
+{
+	for (int attempt = 0; attempt < MAP_GEN_ATTEMPTS; attempt++)
+	{
+		int x = 1 + rand() % (width - 2);
+		int y = 1 + rand() % (height - 2);
+		if (map[y][x] == MAP_FLOOR)
+		{
+			*outX = x; ///вернуть координаты через указатели
+			*outY = y;
+			return 1;
+		}
+	}
+	return 0; ///не нашли печально
+}
+
+/////генерация леса без стен по краям, край это выход за карту
+void mapGenerate5(char** map, int height, int width, int* heroX, int* heroY)
+{
+	int obstaclePercent = OBSTACLE_PERCENT_MIN +
+		rand() % (OBSTACLE_PERCENT_MAX - OBSTACLE_PERCENT_MIN + 1);
+
+	for (int y = 0; y < height; y++)
+	{
+		for (int x = 0; x < width; x++)
+		{
+			////края заполняются как и все остальное
+			int roll = rand() % 100;
+			if (roll < obstaclePercent)
+				map[y][x] = (rand() % 2 == 0) ? MAP_TREE : MAP_ROCK;
+			else
+				map[y][x] = MAP_FLOOR;
+		}
+	}
+	////ставим героя на свободную клетку если не нашли за 1000 попыток
+	//освобождаем центр и ставим туда
+	int hx = 1, hy = 1;
+	if (!findFreeCell5(map, height, width, &hx, &hy))
+	{
+		hx = width / 2;
+		hy = height / 2;
+		map[hy][hx] = MAP_FLOOR; ///освободили центр
+	}
+	map[hy][hx] = MAP_HERO;
+	*heroX = hx;
+	*heroY = hy;
+}
+//////отрисовка с цветом для портала
+void mapPrint5(char** map, int height, int width)
+{
+	for (int y = 0; y < height; y++)
+	{
+		for (int x = 0; x < width; x++)
+		{
+			char c = map[y][x];
+			switch (c)
+			{
+			case MAP_HERO:   setColor(14); break;
+			case MAP_TREE:   setColor(2);  break;
+			case MAP_ROCK:   setColor(7);  break;
+			case MAP_PORTAL: setColor(13); break;//фиолетовый портал
+			default:         setColor(15); break;
+			}
+			putchar(c);
+		}
+		putchar('\n');
+	}
+	setColor(7);
+}
+
+
+//////возращает 2 если шагнули на портал, запоминаем target до того как герой шагнул в портал и возращаем 2
+
+int heroTryMove5(char** map, int height, int width,
+	int* heroX, int* heroY, char cmd)
+{
+	int dx = 0, dy = 0;
+	switch (cmd)
+	{
+	case 'W': dy = -1; break;
+	case 'S': dy = 1; break;
+	case 'A': dx = -1; break;
+	case 'D': dx = 1; break;
+	default:  return 0;
+	}
+
+	int nx = *heroX + dx;
+	int ny = *heroY + dy;
+	////выход за край это сигнал телепорта
+	if (nx < 0 || nx >= width || ny < 0 || ny >= height)
+		return -1;
+	////запоминаем что на клетке до шага героя туда
+	char target = map[ny][nx];
+
+
+	if (map[ny][nx] != MAP_FLOOR && map[ny][nx] != MAP_PORTAL)
+		return 0;
+	///двигаем героя
+	map[*heroY][*heroX] = MAP_FLOOR;
+	*heroX = nx;
+	*heroY = ny;
+	map[*heroY][*heroX] = MAP_HERO;
+	////если шагнули на портал сообщаем об это отдельным кодом 2
+	if (target == MAP_PORTAL)
+		return 2;
+
+	return 1;
+}
+//////ставит портал P в случайную пустую клетку
+///вызывается после 3 перехода за край карты
+void mapPlacePortal(char** map, int height, int width)
+{
+	int px = 1, py = 1;
+	if (findFreeCell5(map, height, width, &px, &py))
+		map[py][px] = MAP_PORTAL; ///поставили портал
+}
+
+
 
 int main()
 {

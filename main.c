@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <time.h>
 
+#include "utils.h" //вспомогательные функции (readInt, setColor, clearScreen, loadItemsFromFile)
+
 //имя пользователя
 char username[32];
 
@@ -12,66 +14,11 @@ char username[32];
 int current_day = 1;
 int current_hour = 8;
 
-// размеры инвентаря и длины названий я доверюсо чату гпт и сделаю так))) это типо макрос типо круче чем просто переменной объявлять 
-#define MAX_ITEMS    10
-#define MAX_NAME_LEN 32
-
 // двумерный массив под названия предметов как в задании
 char item_names[MAX_ITEMS][MAX_NAME_LEN];
 
 // сам инвентарь — в каждой ячейке храним ID предмета
 int inventory[MAX_ITEMS] = { 0, 2, 8, 5, 1, 8, 3, 5, 4, 2 };
-
-// штука с дефолтными значениями для инвентаря если все поломается
-void fillDefaultItems()
-{
-	const char* defaults[MAX_ITEMS] = {
-		"Пусто", "Дерево", "Камень", "Семена пшеницы", "Конфетка",
-		"Клубника", "Сено", "Кукуруза", "Мясо", "Вода"
-	};
-	for (int i = 0; i < MAX_ITEMS; i++)
-		strcpy_s(item_names[i], MAX_NAME_LEN, defaults[i]); // заполняет инвентарь по дефолту
-}
-
-// читаем названия предметов из файла (по строчке на ID)
-void loadItemsFromFile(const char* filename)
-{
-	fillDefaultItems();   // сначала заменяем массив дефолтными значениями на случай если в файле чего то будет не хватать
-
-	FILE* f = NULL;
-	if (fopen_s(&f, filename, "r") != 0 || f == NULL)
-	{
-		printf("[!] Файл %s не найден. Используются названия по умолчанию.\n", filename);
-		return;
-	}
-
-	char line[MAX_NAME_LEN];
-	int i = 0;
-	while (i < MAX_ITEMS && fgets(line, sizeof(line), f) != NULL)
-	{
-		line[strcspn(line, "\r\n")] = '\0';   // убираем \n и \r
-		if (line[0] != '\0')                  // пустые строки пропускаем
-		{
-			strcpy_s(item_names[i], MAX_NAME_LEN, line);
-			i++;
-		}
-	}
-	fclose(f);
-	printf("[+] Загружено предметов из %s: %d\n", filename, i);
-}
-
-//проверрка ввода пользователя
-int readInt()
-{
-	int value;
-	while (scanf_s("%d", &value) != 1)
-	{
-		while (getchar() != '\n');
-		printf("Неверный ввод, попробуйте снова: ");
-	}
-	while (getchar() != '\n');
-	return value;
-}
 
 // запрос имени фермера
 void askName()
@@ -81,12 +28,6 @@ void askName()
 	username[strcspn(username, "\r\n")] = '\0';   // убираем \n и \r в конце
 	if (username[0] == '\0') //если вообще ничего не написали то присваиваем дефолтное имя
 		strcpy_s(username, sizeof(username), "Фермер");
-}
-
-//красота (чисто для красивого выделения времени)
-void setColor(int color)
-{
-	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), color);
 }
 
 //считаем время работы
@@ -347,13 +288,6 @@ void boardOfQuests()
 ///////вероятность препяытствий на карте от 15 до 30%
 #define OBSTACLE_PERCENT_MIN 15
 #define OBSTACLE_PERCENT_MAX 30
-
-
-////////очистка экрана
-void clearScreen(void)
-{
-	system("cls");
-}
 
 //////////защита от дурака. читает одну команду движения: W, A,S,D или Q все остальное не принимает и переспрашивает 
 
@@ -849,7 +783,7 @@ int main()
 {
 	SetConsoleOutputCP(65001);
 	SetConsoleCP(65001);
-	loadItemsFromFile("items.txt");   // грузим каталог предметов
+	loadItemsFromFile(item_names, "items.txt");   // грузим каталог предметов (теперь из utils.c)
 	askName();
 	while (1)
 	{

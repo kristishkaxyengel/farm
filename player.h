@@ -4,9 +4,19 @@
 
 #include "utils.h"
 
+//вариант 9: состояние загрузки рюкзака
+typedef enum {
+    LOAD_STATE_LIGHT = 0, //налегке(<70%)
+    LOAD_STATE_NORMAL,    //нормис(70%-100%)
+    LOAD_STATE_OVERWEIGHT //перегруз(>100%)
+} LoadState;
+
 //структура рюкзака
 typedef struct {
     int slots[MAX_ITEMS]; //массив(хранения предметов)
+    int current_weight; //общий вес сейчас
+    int max_weight; //максимальный
+    LoadState state; //текущий статус
 } Backpack;
 
 //структура игрока
@@ -31,5 +41,6 @@ void searchItemByName(Player* player, char item_names[MAX_ITEMS][MAX_NAME_LEN]);
 void reverseInventory(Player* player, char item_names[MAX_ITEMS][MAX_NAME_LEN]); //реверс карманов
 void saveDiary(Player* player, char item_names[MAX_ITEMS][MAX_NAME_LEN], int day, int hour); //сохранить в файл
 void boardOfQuests(Player* player, char item_names[MAX_ITEMS][MAX_NAME_LEN], int day); //доска объявлений
+void updateWeight(Player* player); //пересчет веса и обновка статуса
 
 #endif

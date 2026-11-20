@@ -1,6 +1,27 @@
 //реализация функций игрока
 #include "player.h"
 
+//веса предметов по их ID (для Варианта 9)
+int item_weights[MAX_ITEMS] = { 0, 5, 10, 1, 1, 2, 3, 2, 4, 2 };
+
+void updateWeight(Player* player) { //пересчет веса
+    player->backpack.current_weight = 0; //обнуление
+    for (int i = 0; i < MAX_ITEMS; i++) {
+        //берем, смотрим вес в массиве и прибавляем к общему
+        player->backpack.current_weight += item_weights[player->backpack.slots[i]];
+    }
+
+    if (player->backpack.current_weight > player->backpack.max_weight) { //а если больше?
+        player->backpack.state = LOAD_STATE_OVERWEIGHT; //перегруз!
+    }
+    else if (player->backpack.current_weight > player->backpack.max_weight * 0.7) { // больше 70%?
+        player->backpack.state = LOAD_STATE_NORMAL; //нормис
+    }
+    else {
+        player->backpack.state = LOAD_STATE_LIGHT; //или налегке
+    }
+}
+
 //создание игрока (динамическая память)
 Player* createPlayer(void) {
     Player* p = (Player*)malloc(sizeof(Player)); //malloc выделяет память
@@ -21,6 +42,9 @@ Player* createPlayer(void) {
     int start_inv[MAX_ITEMS] = { 0, 2, 8, 5, 1, 8, 3, 5, 4, 2 };
     for (int i = 0; i < MAX_ITEMS; i++) p->backpack.slots[i] = start_inv[i];
 
+    p->backpack.max_weight = 30; //стартовый лимит веса
+    updateWeight(p); //считаем вес старта
+
     printf("[+] Персонаж %s создан! (Адрес в памяти: %p)\n", p->name, (void*)p);
     return p;
 }
@@ -35,6 +59,9 @@ void freePlayer(Player* player) {
 
 //показать инвентарь
 void checkInventory(Player* player, char item_names[MAX_ITEMS][MAX_NAME_LEN]) {
+    const char* loadStr[] = { "Налегке", "Норма", "ПЕРЕГРУЗ!" };
+    printf("Вес: %d/%d [%s]\n", player->backpack.current_weight, player->backpack.max_weight, loadStr[player->backpack.state]);
+
     for (int i = 0; i < MAX_ITEMS; i++) {
         if (player->backpack.slots[i] == 0) printf("Слот %d: пусто\n", i);
         else printf("Слот %d: [%d] (%s)\n", i, player->backpack.slots[i], item_names[player->backpack.slots[i]]);
@@ -53,6 +80,7 @@ void swapItem(Player* player, char item_names[MAX_ITEMS][MAX_NAME_LEN]) {
     if (id < 0 || id >= MAX_ITEMS) { printf("Ошибка!\n"); return; }
 
     player->backpack.slots[slot] = id; //кладем предмет в слот
+    updateWeight(player); //пересчитываем вес
 }
 
 //выброс предмета
@@ -62,6 +90,7 @@ void dropItem(Player* player, char item_names[MAX_ITEMS][MAX_NAME_LEN]) {
     printf("Введите номер слота для удаления (0-9): "); slot = readInt();
     if (slot < 0 || slot >= MAX_ITEMS) return;
     player->backpack.slots[slot] = 0;
+    updateWeight(player);
 }
 
 //поиск по имени

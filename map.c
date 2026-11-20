@@ -102,7 +102,8 @@ void adventureRun(Player* player, Map** map_ptr) {
         int res = heroMove(map, player, cmd);
 
         if (res == 1 || res == -1 || res == 2) {
-            player->stamina -= 1;   //пока без перегруза: каждый шаг -1 стамина
+            int stamina_cost = (player->backpack.state == LOAD_STATE_OVERWEIGHT) ? 3 : 1;
+            player->stamina -= stamina_cost;
 
             if (player->stamina <= 0) {
                 printf("\n[!] Вы потеряли сознание! Эвакуация... Половина золота потеряна.\n");

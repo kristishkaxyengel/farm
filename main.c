@@ -5,273 +5,12 @@
 #include <stdlib.h>
 #include <time.h>
 
-#include "utils.h" //вспомогательные функции (readInt, setColor, clearScreen, loadItemsFromFile)
+#include "utils.h"  //вспомогательные функции (readInt, setColor, clearScreen, loadItemsFromFile)
+#include "player.h" //структура Player и функции инвентаря/дневника/доски
 
-//имя пользователя
-char username[32];
-
-// объявляем глобальные пременные
+// объявляем глобальные пременные (время пока живёт здесь)
 int current_day = 1;
 int current_hour = 8;
-
-// двумерный массив под названия предметов как в задании
-char item_names[MAX_ITEMS][MAX_NAME_LEN];
-
-// сам инвентарь — в каждой ячейке храним ID предмета
-int inventory[MAX_ITEMS] = { 0, 2, 8, 5, 1, 8, 3, 5, 4, 2 };
-
-// запрос имени фермера
-void askName()
-{
-	printf("Как тебя зовут, фермер?: ");
-	fgets(username, sizeof(username), stdin); //sizeof это типо сколько максимум можно записать а stdin это стандартный ввод (клавиатура)
-	username[strcspn(username, "\r\n")] = '\0';   // убираем \n и \r в конце
-	if (username[0] == '\0') //если вообще ничего не написали то присваиваем дефолтное имя
-		strcpy_s(username, sizeof(username), "Фермер");
-}
-
-//считаем время работы
-void timeToWork()
-{
-	int workTime = 0;
-	printf("Сколько часов выхотите поработать: \n");
-	workTime = readInt();
-
-	if (workTime < 0)
-	{
-		printf("Нельзя работать отрицательное количество часов.\n");
-		return;
-	}
-	current_hour += workTime;
-	//проверка и добавление часов/дней
-	if (current_hour >= 24)
-	{
-		current_day += current_hour / 24;
-		current_hour = current_hour % 24;
-	}
-	setColor(10);
-	printf("Текущее время: день %d, время %d:00\n", current_day, current_hour);
-	setColor(7);
-}
-
-void checkInventory()
-{
-	//перебираем инвентарь и выводим
-
-	for (int i = 0; i < MAX_ITEMS; i++)
-	{
-		if (inventory[i] == 0)
-			printf("Слот %d: пусто\n", i);
-		else
-			printf("Слот %d: [%d] (%s)\n", i, inventory[i], item_names[inventory[i]]);
-	}
-}
-
-//замена предметов
-void svapItem()
-{
-	int slot, id;
-	checkInventory();
-	printf("Введите номер слота который хотите заменить (0-9): ");
-	slot = readInt();
-	if (slot < 0 || slot > 9) { printf("Неверный номер слота!\n"); return; }
-
-	//добавляем вывод предметов для удобства
-	for (int i = 0; i < MAX_ITEMS; i++)
-	{
-		printf("Предмет %d: (%s)\n", i, item_names[i]);
-	}
-
-	printf("Введите ID предмета (0-9): ");
-	id = readInt();
-	if (id < 0 || id > 9) { printf("Неверный ID предмета!\n"); return; }
-
-	inventory[slot] = id;
-	printf("В слот %d положен предмет [%d] (%s)\n", slot, id, item_names[id]);
-}
-
-//удаление предмета
-void dropItem()
-{
-	//выводим весь список для удобства выбора
-	checkInventory();
-	int slot;
-	printf("Введите номер слота который хотите выбросить  (0-9): ");
-	slot = readInt();
-	if (slot < 0 || slot > 9) { printf("Неверный номер слота!\n"); return; }
-
-	inventory[slot] = 0;
-	printf("Слот %d очищен.\n", slot);
-}
-
-void reverseInventory()
-{
-	printf("Инвентарь до:\n");
-	checkInventory();
-
-	// меняем первый и последний слот типо по умному, ну хоть не в файле менять
-	for (int i = 0; i < MAX_ITEMS / 2; i++)
-	{
-		int temp = inventory[i];
-		inventory[i] = inventory[MAX_ITEMS - 1 - i];
-		inventory[MAX_ITEMS - 1 - i] = temp;
-	}
-
-	printf("\nИнвентарь после:\n");
-	checkInventory();
-}
-
-
-// Поиск предмета в рюкзаке по названию
-void searchItemByName()
-{
-	char query[MAX_NAME_LEN];
-
-	printf("Введите название предмета для поиска: ");
-	fgets(query, sizeof(query), stdin);
-	query[strcspn(query, "\r\n")] = '\0';
-
-	for (int i = 1; i < MAX_ITEMS; i++)
-	{
-		if (strcmp(item_names[i], query) == 0)
-		{
-			int count = 0;
-
-			printf("Предмет [%d] (%s) найден в слотах: ", i, item_names[i]);
-
-			for (int j = 0; j < MAX_ITEMS; j++)
-			{
-				if (inventory[j] == i)
-				{
-					printf("%d ", j);
-					count++;
-				}
-			}
-
-			if (count == 0)
-				printf("\nВ рюкзаке этого предмета нет.\n");
-			else
-				printf("\nВсего штук: %d\n", count);
-
-			return;
-		}
-	}
-
-	printf("Предмет \"%s\" не найден в каталоге.\n", query);
-}
-
-// Запись состояния фермы в дневник
-void saveDiary()
-{
-	FILE* file = NULL;
-
-	// Открываем файл для перезаписи
-	if (fopen_s(&file, "diary.txt", "w") != 0 || file == NULL)
-	{
-		printf("[!] Не удалось открыть diary.txt\n");
-		return;
-	}
-
-	printf("\n========== ДНЕВНИК ФЕРМЕРА ==========\n");
-	fprintf(file, "========== ДНЕВНИК ФЕРМЕРА ==========\n");
-
-	printf("Фермер: %s\n", username);
-	fprintf(file, "Фермер: %s\n", username);
-
-	printf("День: %d\n", current_day);
-	fprintf(file, "День: %d\n", current_day);
-
-	printf("Время: %02d:00\n", current_hour);
-	fprintf(file, "Время: %02d:00\n", current_hour);
-
-	printf("\nИнвентарь:\n");
-	fprintf(file, "\nИнвентарь:\n");
-
-	for (int i = 0; i < MAX_ITEMS; i++)
-	{
-		char* itemName = item_names[inventory[i]];
-
-		printf("Слот %d: %s\n", i, itemName);
-		fprintf(file, "Слот %d: %s\n", i, itemName);
-	}
-
-	printf("=====================================\n");
-	fprintf(file, "=====================================\n");
-
-	fclose(file);
-
-	printf("\n[+] Состояние фермы сохранено в diary.txt\n");
-}
-
-//========================================================
-//доска объявлений
-void boardOfQuests()
-{
-	FILE* fin = NULL, * fout = NULL; //file это для работы с файлами fin начальный файл 
-	if (fopen_s(&fin, "input.txt", "r") != 0 || !fin) // открывае файл через fopen_s и вводим 
-	{
-		printf("[!] input.txt не найден\n");
-		return;
-	}
-	if (fopen_s(&fout, "output.txt", "w") != 0 || !fout)
-	{
-		printf("[!] output.txt не создать\n");
-		fclose(fin);
-
-		return;
-	}
-
-	// заголовок — и на экран, и в файл
-	printf("=== Доска объявлений (день %d) ===\n\n", current_day); //выводит в консоль
-	fprintf(fout, "=== Доска объявлений (день %d) ===\n\n", current_day); // записывает в сам в файл
-
-	char line[256]; // символы для записи из input в код
-	int total = 0, ready_count = 0;
-
-	while (fgets(line, sizeof(line), fin))
-	{
-		int day, reward;
-		char customer[64], item[32];
-
-		if (sscanf_s(line, "%d|%63[^|]|%31[^|]|%d", //читаем и записываем информацию условно число/первый масив с заказчикм/второй масив с предметом/награда
-			&day, customer, (unsigned)sizeof(customer),
-			item, (unsigned)sizeof(item), &reward) != 4)
-			continue;
-
-		if (day > current_day) continue;   // квест ещё не доступен типо проверка на день
-		total++;
-
-		// ищем предмет в рюкзаке
-		int ready = 0;
-		for (int i = 0; i < MAX_ITEMS; i++)
-		{
-			if (inventory[i] != 0 &&
-				strcmp(item_names[inventory[i]], item) == 0) // сравниваем предмет в задании с предметами в инвентаре
-			{
-				ready = 1;
-				break;
-			}
-		}
-		if (ready) ready_count++;
-
-		const char* status = ready ? "[ГОТОВО К СДАЧЕ]" : "[В ПРОЦЕССЕ]"; // если статус готов рейди то к сдаче иначк в процесс
-
-		// одна и та же строка — на экран и в файл
-		printf("День %d | %s | %s | %d | %s\n",
-			day, customer, item, reward, status);
-		fprintf(fout, "День %d | %s | %s | %d | %s\n",
-			day, customer, item, reward, status);
-	}
-
-	fclose(fin);
-
-	// итог — тоже в оба места
-	printf("\nИтого: доступно %d, готово к сдаче %d\n", total, ready_count);
-	fprintf(fout, "\nИтого: доступно %d, готово к сдаче %d\n", total, ready_count);
-
-	fclose(fout);
-	printf("\n[+] Результат сохранён в output.txt\n");
-}
 
 ///////////////////////////////////////////////
 
@@ -779,97 +518,161 @@ void adventureRun5(void)
 
 
 //========================================================
+//печать меню (вынесено из main)
+void printMenu()
+{
+	printf("\n=== МЕНЮ ФЕРМЕРА ===\n");
+	printf("[1] Создать/Пересоздать персонажа\n");
+	printf("[2] Карточка персонажа (время, инвентарь)\n");
+	printf("[3] Время (Посмотреть, Ждать, Спать)\n");
+	printf("[4] Инвентарь (Посмотреть)\n");
+	printf("[5] Положить предмет в слот\n");
+	printf("[6] Выбросить предмет\n");
+	printf("[7] Инверсия карманов\n");
+	printf("[8] Поиск предмета по названию\n");
+	printf("[9] Записать состояние в дневник\n");
+	printf("[10] Доска объявлений (квесты)\n");
+	printf("[11] Отправиться в приключение\n");
+	printf("[0] Выход\n");
+	printf("Ваш выбор: ");
+}
+
 int main()
 {
 	SetConsoleOutputCP(65001);
 	SetConsoleCP(65001);
-	loadItemsFromFile(item_names, "items.txt");   // грузим каталог предметов (теперь из utils.c)
-	askName();
-	while (1)
+	srand((unsigned)time(NULL));
+
+	char item_names[MAX_ITEMS][MAX_NAME_LEN];
+	loadItemsFromFile(item_names, "items.txt");   // грузим каталог предметов
+
+	Player* player = NULL;   // персонаж создаётся через меню, изначально пусто
+	int running = 1;
+
+	while (running)
 	{
-		printf("=== Фермер: %s ===\n", username);   //  шапка с именем
-		printf("Меню \n [0] Выход \n [1] Посмотреть на часы \n [2] Промотать время (Поработать) \n [3] Посмотреть инвентарь \n [4] Положить предмет в слот \n [5] Выбросить предмет \n [6] Инверсия карманов \n [7] Поиск предмета в рюкзаке по названию \n [8] Записать состояние в дневник \n [9] Доска объявлений \n [10] Отправиться в приключение (лес-кольцо) \n");
+		printMenu();
 		int choice = readInt();
-		//меню с выбором действий
+
 		switch (choice)
 		{
-		case(0):
-		{
-			return 0;
-		}
+		case 0:
+			running = 0;
+			break;
 
-		case(1):
-		{
-			system("cls");
-			setColor(10);
-			printf("Текущее время: день %d, время %d:00\n", current_day, current_hour);
-			setColor(7);
+		case 1:
+			//пересоздание с подтверждением
+			if (player != NULL) {
+				printf("Персонаж уже существует. Удалить старого? (1 - Да, 0 - Нет): ");
+				if (readInt() == 1) freePlayer(player);
+				else continue;
+			}
+			player = createPlayer();
 			break;
-		}
 
-		case(2):
-		{
-			system("cls");
-			timeToWork();
+		case 2:
+			if (!player) { printf("Сначала создайте персонажа!\n"); break; }
+			printf("\n--- КАРТОЧКА ---\nИмя: %s\nHP: %d/%d\nВыносливость: %d/%d\nЗолото: %d\n",
+				player->name, player->hp, player->max_hp, player->stamina, player->max_stamina, player->gold);
+			showTime(current_day, current_hour);
+			checkInventory(player, item_names);
 			break;
-		}
-		case(3):
-		{
-			system("cls");
-			checkInventory();
-			break;
-		}
 
-		case(4):
-		{
-			system("cls");
-			svapItem();
-			break;
-		}
+		case 3:
+			//защита нельзя управлять временем, если нет персонажа
+			if (!player) { printf("Сначала создайте персонажа!\n"); break; }
 
-		case(5):
-		{
-			system("cls");
-			dropItem();
-			break;
-		}
+			printf("[1] Посмотреть часы\n[2] Подождать\n[3] Лечь спать\n");
+			int t = readInt();
 
-		case(6):
-		{
-			system("cls");
-			reverseInventory();
-			break;
-		}
-		case(7):
-		{
+			if (t == 1) {
+				showTime(current_day, current_hour);
+			}
+			else if (t == 2) {
+				printf("Сколько часов ждать? ");
+				int h = readInt();
+				if (h < 1) { printf("Нельзя ждать меньше часа!\n"); break; }
 
-			system("cls");
-			checkInventory();
-			searchItemByName();
+				//вычисляем сколько время после ожидания
+				int new_hour = current_hour + h;
+				int new_day = current_day + (new_hour / 24);
+				new_hour = new_hour % 24;
+
+				//проверка на 2 часа ночи
+				int crossed_2am = 0;
+				for (int i = 1; i <= h; i++) {
+					int check_hour = (current_hour + i) % 24;
+					if (check_hour == 2) crossed_2am = 1;
+				}
+
+				if (crossed_2am) {
+					printf("\n[!] Фермер начинает засыпать на ходу. Нельзя ждать дольше 02:00 ночи!\n");
+					printf("    Идите спать (пункт 3).\n\n");
+				}
+				else {
+					current_day = new_day;
+					current_hour = new_hour;
+					printf("Вы подождали %d ч. Текущее время: день %d, %02d:00\n", h, current_day, current_hour);
+				}
+			}
+			else if (t == 3) {
+				current_day++; current_hour = 8;
+				player->hp = player->max_hp;
+				player->stamina = player->max_stamina;
+				printf("Вы поспали. Утро! HP и стамина восстановлены.\n");
+			}
 			break;
-		}
-		case(8):
-		{
-			system("cls");
-			saveDiary();
+
+		case 4:
+			if (!player) { printf("Сначала создайте персонажа!\n"); break; }
+			checkInventory(player, item_names);
 			break;
-		}
-		case(9):
-		{
-			system("cls");
-			boardOfQuests();
+
+		case 5:
+			if (!player) { printf("Сначала создайте персонажа!\n"); break; }
+			swapItem(player, item_names);
 			break;
-		}
-		case(10):
-		{
-			system("cls");
-			adventureRun5();    // ВАРИАНТ 5
+
+		case 6:
+			if (!player) { printf("Сначала создайте персонажа!\n"); break; }
+			dropItem(player, item_names);
 			break;
-		}
+
+		case 7:
+			if (!player) { printf("Сначала создайте персонажа!\n"); break; }
+			reverseInventory(player, item_names);
+			break;
+
+		case 8:
+			if (!player) { printf("Сначала создайте персонажа!\n"); break; }
+			searchItemByName(player, item_names);
+			break;
+
+		case 9:
+			if (!player) { printf("Сначала создайте персонажа!\n"); break; }
+			saveDiary(player, item_names, current_day, current_hour);
+			break;
+
+		case 10:
+			if (!player) { printf("Сначала создайте персонажа!\n"); break; }
+			boardOfQuests(player, item_names, current_day);
+			break;
+
+		case 11:
+			//защита: без персонажа и без стамины в поход нельзя
+			if (!player) { printf("Сначала создайте персонажа!\n"); break; }
+			if (player->stamina <= 0) { printf("У вас нет сил идти!\n"); break; }
+
+			printf("Генерация леса...\n");
+			adventureRun5();    // ВАРИАНТ 5 (пока ещё старая реализация, уедет в map.c)
+			break;
+
 		default:
-			printf("Неверный пункт меню\n");
+			printf("Неверный пункт!\n");
 			break;
 		}
 	}
+
+	if (player) freePlayer(player);   // очистка при выходе
 	return 0;
 }
